@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  options,
   ...
 }:
 
@@ -212,7 +213,16 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && cfg.plugins != { }) {
+  config = lib.mkMerge [
+    # Bridge: import plugins from programs.claude-code.plugins when agentplot-kit module is present
+    (lib.mkIf (options.programs ? claude-code && (config.programs.claude-code.plugins or { }) != { }) {
+      programs.claude-plugins = {
+        enable = true;
+        plugins = config.programs.claude-code.plugins;
+      };
+    })
+
+    (lib.mkIf (cfg.enable && cfg.plugins != { }) {
     # Place extracted plugin files into the cache via activation script.
     # We use activation rather than home.file because:
     # 1. Claude Code may write to these directories (updates, etc.)
@@ -315,5 +325,6 @@ in
           $DRY_RUN_CMD chmod u+w "${cfg.pluginsDir}/known_marketplaces.json"
         fi
       '';
-  };
+    })
+  ];
 }
