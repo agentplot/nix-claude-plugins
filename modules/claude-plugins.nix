@@ -252,6 +252,14 @@ in
                 $VERBOSE_ECHO "Plugin ${pluginName} unchanged, skipping"
               else
                 $VERBOSE_ECHO "Installing plugin: ${pluginName} → $dest"
+                # chmod before rm: previous installs (or older versions of this
+                # module) may have left read-only files/dirs from the nix store.
+                # Without this, `rm -rf` fails under `set -eu` and activation
+                # aborts before the post-copy chmod can repair perms,
+                # self-perpetuating the failure on every rebuild.
+                if [ -e "$dest" ]; then
+                  $DRY_RUN_CMD chmod -R u+w "$dest" 2>/dev/null || true
+                fi
                 $DRY_RUN_CMD rm -rf "$dest"
                 $DRY_RUN_CMD mkdir -p "$dest"
                 $DRY_RUN_CMD cp -rL "$nix_src"/. "$dest/"
