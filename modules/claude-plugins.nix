@@ -309,9 +309,17 @@ in
           in
           lib.filterAttrs (_: p: lib.elem "${p.pluginName}@${p.marketplace.name}" keys) catalog;
 
+        # When availablePlugins is set, install that superset into EVERY target and
+        # let enabledPlugins (settings.json) decide activation — install is decoupled
+        # from enable. When null, install is gated by enabledPlugins (legacy).
+        installOverride =
+          if (cc.availablePlugins or null) != null
+          then filterCatalog cc.availablePlugins
+          else null;
+
         mkTarget = configDir: ep: {
           pluginsDir = "${home}/${configDir}/plugins";
-          plugins = filterCatalog ep;
+          plugins = if installOverride != null then installOverride else filterCatalog ep;
         };
 
         profileTargets = lib.mapAttrs' (
